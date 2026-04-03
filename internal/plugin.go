@@ -1,44 +1,85 @@
 package internal
 
 import (
+	"fmt"
+
 	sdk "github.com/GoCodeAlone/workflow/plugin/external/sdk"
 )
 
-// Manifest returns the plugin metadata used by the workflow engine for
-// discovery and capability negotiation.
+// Manifest is the plugin manifest exported for tests.
 var Manifest = sdk.PluginManifest{
-	Name:        "workflow-plugin-TEMPLATE",
+	Name:        "workflow-plugin-erp",
 	Version:     "0.1.0",
-	Description: "TEMPLATE plugin for the workflow engine",
+	Description: "Enterprise ERP integration (SAP S/4HANA via OData v4)",
 	Author:      "GoCodeAlone",
-	License:     "MIT",
-	ModuleTypes: []string{
-		// "example.module_type",
-	},
-	StepTypes: []string{
-		// "step.example_action",
-	},
 }
 
-type plugin struct{}
+type erpPlugin struct{}
 
-// NewPlugin creates a new plugin instance.
-func NewPlugin() sdk.PluginProvider {
-	return &plugin{}
-}
+// NewPlugin returns the ERP plugin provider.
+func NewPlugin() *erpPlugin { return &erpPlugin{} }
 
-func (p *plugin) Manifest() sdk.PluginManifest {
-	return Manifest
-}
+func (p *erpPlugin) Manifest() sdk.PluginManifest { return Manifest }
 
-func (p *plugin) ModuleFactories() map[string]sdk.ModuleFactory {
-	return map[string]sdk.ModuleFactory{
-		// "example.module_type": NewExampleModuleFactory(),
+// ModuleProvider
+
+func (p *erpPlugin) ModuleTypes() []string { return []string{"erp.provider"} }
+
+func (p *erpPlugin) CreateModule(typeName, name string, config map[string]any) (sdk.ModuleInstance, error) {
+	switch typeName {
+	case "erp.provider":
+		return newERPProvider(name, config), nil
+	default:
+		return nil, fmt.Errorf("unknown module type %q", typeName)
 	}
 }
 
-func (p *plugin) StepFactories() map[string]sdk.StepFactory {
-	return map[string]sdk.StepFactory{
-		// "step.example_action": NewExampleStepFactory(),
+// StepProvider
+
+var stepTypes = []string{
+	"step.erp_entity_read",
+	"step.erp_entity_query",
+	"step.erp_entity_create",
+	"step.erp_entity_update",
+	"step.erp_entity_delete",
+	"step.erp_batch",
+	"step.erp_function_call",
+	"step.erp_metadata",
+	"step.erp_raw_request",
+}
+
+func (p *erpPlugin) StepTypes() []string { return stepTypes }
+
+func (p *erpPlugin) CreateStep(typeName, name string, config map[string]any) (sdk.StepInstance, error) {
+	providerName := strOr(config, "provider", "default")
+
+	switch typeName {
+	case "step.erp_entity_read":
+		return &entityReadStep{providerName: providerName}, nil
+	case "step.erp_entity_query":
+		return &entityQueryStep{providerName: providerName}, nil
+	case "step.erp_entity_create":
+		return &entityCreateStep{providerName: providerName}, nil
+	case "step.erp_entity_update":
+		return &entityUpdateStep{providerName: providerName}, nil
+	case "step.erp_entity_delete":
+		return &entityDeleteStep{providerName: providerName}, nil
+	case "step.erp_batch":
+		return &batchStep{providerName: providerName}, nil
+	case "step.erp_function_call":
+		return &functionCallStep{providerName: providerName}, nil
+	case "step.erp_metadata":
+		return &metadataStep{providerName: providerName}, nil
+	case "step.erp_raw_request":
+		return &rawRequestStep{providerName: providerName}, nil
+	default:
+		return nil, fmt.Errorf("unknown step type %q", typeName)
 	}
 }
+
+// Verify interface compliance at compile time.
+var (
+	_ sdk.PluginProvider = (*erpPlugin)(nil)
+	_ sdk.ModuleProvider = (*erpPlugin)(nil)
+	_ sdk.StepProvider   = (*erpPlugin)(nil)
+)

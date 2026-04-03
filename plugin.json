@@ -1,20 +1,30 @@
 {
-    "name": "workflow-plugin-TEMPLATE",
+    "name": "workflow-plugin-erp",
     "version": "0.1.0",
-    "description": "TEMPLATE plugin for the workflow engine",
+    "description": "Enterprise ERP integration (SAP S/4HANA via OData v4)",
     "author": "GoCodeAlone",
     "license": "MIT",
     "type": "external",
     "tier": "community",
     "private": false,
-    "minEngineVersion": "0.3.55",
-    "keywords": [],
-    "homepage": "https://github.com/GoCodeAlone/workflow-plugin-TEMPLATE",
-    "repository": "https://github.com/GoCodeAlone/workflow-plugin-TEMPLATE",
+    "minEngineVersion": "0.3.56",
+    "keywords": ["erp", "sap", "odata", "s4hana"],
+    "homepage": "https://github.com/GoCodeAlone/workflow-plugin-erp",
+    "repository": "https://github.com/GoCodeAlone/workflow-plugin-erp",
     "capabilities": {
         "configProvider": false,
-        "moduleTypes": [],
-        "stepTypes": [],
+        "moduleTypes": ["erp.provider"],
+        "stepTypes": [
+            "step.erp_entity_read",
+            "step.erp_entity_query",
+            "step.erp_entity_create",
+            "step.erp_entity_update",
+            "step.erp_entity_delete",
+            "step.erp_batch",
+            "step.erp_function_call",
+            "step.erp_metadata",
+            "step.erp_raw_request"
+        ],
         "triggerTypes": []
     }
 }

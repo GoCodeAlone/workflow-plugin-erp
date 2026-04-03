@@ -1,0 +1,226 @@
+package internal
+
+import (
+	"context"
+	"fmt"
+
+	sdk "github.com/GoCodeAlone/workflow/plugin/external/sdk"
+)
+
+// entityReadStep implements step.erp_entity_read
+type entityReadStep struct{ providerName string }
+
+func (s *entityReadStep) Execute(ctx context.Context, _ map[string]any, _ map[string]map[string]any, current, _ map[string]any, _ map[string]any) (*sdk.StepResult, error) {
+	p, err := getProvider(s.providerName)
+	if err != nil {
+		return nil, err
+	}
+	entitySet := stringFrom(current, "entity_set")
+	key := stringFrom(current, "key")
+	if entitySet == "" || key == "" {
+		return nil, fmt.Errorf("entity_set and key are required")
+	}
+	entity, err := p.erp.ReadEntity(ctx, entitySet, key)
+	if err != nil {
+		return nil, fmt.Errorf("read entity: %w", err)
+	}
+	return &sdk.StepResult{Output: map[string]any{"entity": entity}}, nil
+}
+
+// entityQueryStep implements step.erp_entity_query
+type entityQueryStep struct{ providerName string }
+
+func (s *entityQueryStep) Execute(ctx context.Context, _ map[string]any, _ map[string]map[string]any, current, _ map[string]any, _ map[string]any) (*sdk.StepResult, error) {
+	p, err := getProvider(s.providerName)
+	if err != nil {
+		return nil, err
+	}
+	entitySet := stringFrom(current, "entity_set")
+	if entitySet == "" {
+		return nil, fmt.Errorf("entity_set is required")
+	}
+	opts := QueryOptions{
+		Filter:  stringFrom(current, "filter"),
+		Select:  stringFrom(current, "select"),
+		Expand:  stringFrom(current, "expand"),
+		OrderBy: stringFrom(current, "orderby"),
+		Top:     intFrom(current, "top"),
+		Skip:    intFrom(current, "skip"),
+	}
+	result, err := p.erp.QueryEntities(ctx, entitySet, opts)
+	if err != nil {
+		return nil, fmt.Errorf("query entities: %w", err)
+	}
+	out := map[string]any{
+		"results":  result.Results,
+		"count":    result.Count,
+		"nextLink": result.NextLink,
+	}
+	return &sdk.StepResult{Output: out}, nil
+}
+
+// entityCreateStep implements step.erp_entity_create
+type entityCreateStep struct{ providerName string }
+
+func (s *entityCreateStep) Execute(ctx context.Context, _ map[string]any, _ map[string]map[string]any, current, _ map[string]any, _ map[string]any) (*sdk.StepResult, error) {
+	p, err := getProvider(s.providerName)
+	if err != nil {
+		return nil, err
+	}
+	entitySet := stringFrom(current, "entity_set")
+	data := mapFrom(current, "data")
+	if entitySet == "" {
+		return nil, fmt.Errorf("entity_set is required")
+	}
+	if data == nil {
+		return nil, fmt.Errorf("data is required")
+	}
+	created, err := p.erp.CreateEntity(ctx, entitySet, data)
+	if err != nil {
+		return nil, fmt.Errorf("create entity: %w", err)
+	}
+	return &sdk.StepResult{Output: map[string]any{"entity": created}}, nil
+}
+
+// entityUpdateStep implements step.erp_entity_update
+type entityUpdateStep struct{ providerName string }
+
+func (s *entityUpdateStep) Execute(ctx context.Context, _ map[string]any, _ map[string]map[string]any, current, _ map[string]any, _ map[string]any) (*sdk.StepResult, error) {
+	p, err := getProvider(s.providerName)
+	if err != nil {
+		return nil, err
+	}
+	entitySet := stringFrom(current, "entity_set")
+	key := stringFrom(current, "key")
+	data := mapFrom(current, "data")
+	if entitySet == "" || key == "" {
+		return nil, fmt.Errorf("entity_set and key are required")
+	}
+	if data == nil {
+		return nil, fmt.Errorf("data is required")
+	}
+	if err := p.erp.UpdateEntity(ctx, entitySet, key, data); err != nil {
+		return nil, fmt.Errorf("update entity: %w", err)
+	}
+	return &sdk.StepResult{Output: map[string]any{"ok": true}}, nil
+}
+
+// entityDeleteStep implements step.erp_entity_delete
+type entityDeleteStep struct{ providerName string }
+
+func (s *entityDeleteStep) Execute(ctx context.Context, _ map[string]any, _ map[string]map[string]any, current, _ map[string]any, _ map[string]any) (*sdk.StepResult, error) {
+	p, err := getProvider(s.providerName)
+	if err != nil {
+		return nil, err
+	}
+	entitySet := stringFrom(current, "entity_set")
+	key := stringFrom(current, "key")
+	if entitySet == "" || key == "" {
+		return nil, fmt.Errorf("entity_set and key are required")
+	}
+	if err := p.erp.DeleteEntity(ctx, entitySet, key); err != nil {
+		return nil, fmt.Errorf("delete entity: %w", err)
+	}
+	return &sdk.StepResult{Output: map[string]any{"ok": true}}, nil
+}
+
+// batchStep implements step.erp_batch
+type batchStep struct{ providerName string }
+
+func (s *batchStep) Execute(ctx context.Context, _ map[string]any, _ map[string]map[string]any, current, _ map[string]any, _ map[string]any) (*sdk.StepResult, error) {
+	p, err := getProvider(s.providerName)
+	if err != nil {
+		return nil, err
+	}
+	rawOps := sliceFrom(current, "operations")
+	if len(rawOps) == 0 {
+		return nil, fmt.Errorf("operations array is required")
+	}
+	ops := make([]BatchOp, 0, len(rawOps))
+	for _, raw := range rawOps {
+		m, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		ops = append(ops, BatchOp{
+			Method:    stringFrom(m, "method"),
+			EntitySet: stringFrom(m, "entity_set"),
+			Key:       stringFrom(m, "key"),
+			Body:      mapFrom(m, "body"),
+			ContentID: stringFrom(m, "content_id"),
+		})
+	}
+	results, err := p.erp.BatchOperation(ctx, ops)
+	if err != nil {
+		return nil, fmt.Errorf("batch: %w", err)
+	}
+	out := make([]map[string]any, len(results))
+	for i, r := range results {
+		out[i] = map[string]any{
+			"content_id":  r.ContentID,
+			"status_code": r.StatusCode,
+			"body":        r.Body,
+		}
+	}
+	return &sdk.StepResult{Output: map[string]any{"results": out}}, nil
+}
+
+// functionCallStep implements step.erp_function_call
+type functionCallStep struct{ providerName string }
+
+func (s *functionCallStep) Execute(ctx context.Context, _ map[string]any, _ map[string]map[string]any, current, _ map[string]any, _ map[string]any) (*sdk.StepResult, error) {
+	p, err := getProvider(s.providerName)
+	if err != nil {
+		return nil, err
+	}
+	name := stringFrom(current, "function_name")
+	if name == "" {
+		return nil, fmt.Errorf("function_name is required")
+	}
+	params := mapFrom(current, "params")
+	result, err := p.erp.CallFunction(ctx, name, params)
+	if err != nil {
+		return nil, fmt.Errorf("function call: %w", err)
+	}
+	return &sdk.StepResult{Output: map[string]any{"result": result}}, nil
+}
+
+// metadataStep implements step.erp_metadata
+type metadataStep struct{ providerName string }
+
+func (s *metadataStep) Execute(ctx context.Context, _ map[string]any, _ map[string]map[string]any, _ map[string]any, _ map[string]any, _ map[string]any) (*sdk.StepResult, error) {
+	p, err := getProvider(s.providerName)
+	if err != nil {
+		return nil, err
+	}
+	metadata, err := p.erp.GetMetadata(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("metadata: %w", err)
+	}
+	return &sdk.StepResult{Output: map[string]any{"metadata": metadata}}, nil
+}
+
+// rawRequestStep implements step.erp_raw_request
+type rawRequestStep struct{ providerName string }
+
+func (s *rawRequestStep) Execute(ctx context.Context, _ map[string]any, _ map[string]map[string]any, current, _ map[string]any, _ map[string]any) (*sdk.StepResult, error) {
+	p, err := getProvider(s.providerName)
+	if err != nil {
+		return nil, err
+	}
+	method := strOr(current, "method", "GET")
+	path := stringFrom(current, "path")
+	if path == "" {
+		return nil, fmt.Errorf("path is required")
+	}
+	body := mapFrom(current, "body")
+	headers := stringMapFrom(current, "headers")
+	status, respBody, err := p.erp.RawRequest(ctx, method, path, body, headers)
+	if err != nil {
+		return nil, fmt.Errorf("raw request: %w", err)
+	}
+	return &sdk.StepResult{Output: map[string]any{
+		"status_code": status,
+		"body":        respBody,
+	}}, nil
+}
