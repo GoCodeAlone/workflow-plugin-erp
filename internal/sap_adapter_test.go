@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestSAPAuth_FetchCSRFToken(t *testing.T) {
@@ -116,6 +117,53 @@ func TestSAPAuth_UnsupportedType(t *testing.T) {
 	req, _ := http.NewRequest("GET", "http://example.com/test", nil)
 	if err := auth.AuthHeader()(req); err == nil {
 		t.Error("expected error for unsupported auth type")
+	}
+}
+
+func TestSAPAuth_FetchCSRFToken_OAuth2_NoDeadlock(t *testing.T) {
+	tokenSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]any{
+			"access_token": "csrf-oauth-token",
+			"token_type":   "Bearer",
+			"expires_in":   3600,
+		})
+	}))
+	defer tokenSrv.Close()
+
+	csrfSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer csrf-oauth-token" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		w.Header().Set("X-CSRF-Token", "csrf-from-oauth")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer csrfSrv.Close()
+
+	auth := NewSAPAuth(csrfSrv.URL, SAPAuthConfig{
+		AuthType:     "oauth2",
+		ClientID:     "cid",
+		ClientSecret: "csecret",
+		TokenURL:     tokenSrv.URL,
+	}, nil)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		token, err := auth.FetchCSRFToken(context.Background())
+		if err != nil {
+			t.Errorf("FetchCSRFToken with OAuth2 failed: %v", err)
+			return
+		}
+		if token != "csrf-from-oauth" {
+			t.Errorf("expected csrf-from-oauth, got %q", token)
+		}
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("FetchCSRFToken deadlocked with OAuth2 auth")
 	}
 }
 

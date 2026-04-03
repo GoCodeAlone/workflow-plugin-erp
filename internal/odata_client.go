@@ -316,7 +316,13 @@ func (c *ODataClient) Batch(ctx context.Context, requests []BatchRequest) ([]Bat
 func (c *ODataClient) CallFunction(ctx context.Context, name string, params map[string]any) (map[string]any, error) {
 	parts := make([]string, 0, len(params))
 	for k, v := range params {
-		parts = append(parts, fmt.Sprintf("%s=%v", k, v))
+		switch val := v.(type) {
+		case string:
+			escaped := strings.ReplaceAll(val, "'", "''")
+			parts = append(parts, fmt.Sprintf("%s='%s'", k, url.PathEscape(escaped)))
+		default:
+			parts = append(parts, fmt.Sprintf("%s=%v", k, v))
+		}
 	}
 	paramStr := ""
 	if len(parts) > 0 {

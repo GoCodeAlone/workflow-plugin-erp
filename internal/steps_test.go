@@ -100,9 +100,12 @@ func TestEntityReadStep_MissingFields(t *testing.T) {
 	registerTestProvider(t, "test-read-err", mock)
 
 	step := &entityReadStep{providerName: "test-read-err"}
-	_, err := step.Execute(context.Background(), nil, nil, map[string]any{}, nil, nil)
-	if err == nil {
-		t.Error("expected error for missing fields")
+	result, err := step.Execute(context.Background(), nil, nil, map[string]any{}, nil, nil)
+	if err != nil {
+		t.Fatalf("expected nil Go error, got: %v", err)
+	}
+	if result.Output["error"] == nil {
+		t.Error("expected error in output map for missing fields")
 	}
 }
 
@@ -281,12 +284,15 @@ func TestRawRequestStep(t *testing.T) {
 
 func TestStepWithMissingProvider(t *testing.T) {
 	step := &entityReadStep{providerName: "nonexistent-provider"}
-	_, err := step.Execute(context.Background(), nil, nil, map[string]any{
+	result, err := step.Execute(context.Background(), nil, nil, map[string]any{
 		"entity_set": "X",
 		"key":        "Y",
 	}, nil, nil)
-	if err == nil {
-		t.Error("expected error for missing provider")
+	if err != nil {
+		t.Fatalf("expected nil Go error, got: %v", err)
+	}
+	if result.Output["error"] == nil {
+		t.Error("expected error in output map for missing provider")
 	}
 }
 

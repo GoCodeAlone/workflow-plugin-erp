@@ -79,7 +79,12 @@ func (a *SAPAuth) AuthHeader() AuthHeaderFunc {
 func (a *SAPAuth) getOAuthToken(ctx context.Context) (string, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	return a.getOAuthTokenLocked(ctx)
+}
 
+// getOAuthTokenLocked fetches or returns a cached OAuth2 token.
+// The caller must hold a.mu.
+func (a *SAPAuth) getOAuthTokenLocked(ctx context.Context) (string, error) {
 	if a.oauthToken != nil && time.Now().Before(a.oauthToken.ExpiresAt) {
 		return a.oauthToken.AccessToken, nil
 	}
@@ -136,7 +141,7 @@ func (a *SAPAuth) FetchCSRFToken(ctx context.Context) (string, error) {
 	}
 	req.Header.Set("X-CSRF-Token", "Fetch")
 
-	if err := a.AuthHeader()(req); err != nil {
+	if err := a.applyAuthLocked(ctx, req); err != nil {
 		return "", err
 	}
 
@@ -153,6 +158,27 @@ func (a *SAPAuth) FetchCSRFToken(ctx context.Context) (string, error) {
 	}
 	a.csrfToken = token
 	return token, nil
+}
+
+// applyAuthLocked applies auth headers to a request.
+// The caller must hold a.mu.
+func (a *SAPAuth) applyAuthLocked(ctx context.Context, req *http.Request) error {
+	switch a.config.AuthType {
+	case "basic":
+		creds := base64.StdEncoding.EncodeToString([]byte(a.config.Username + ":" + a.config.Password))
+		req.Header.Set("Authorization", "Basic "+creds)
+	case "oauth2":
+		token, err := a.getOAuthTokenLocked(ctx)
+		if err != nil {
+			return fmt.Errorf("oauth2 token: %w", err)
+		}
+		req.Header.Set("Authorization", "Bearer "+token)
+	case "apikey":
+		req.Header.Set("APIKey", a.config.APIKey)
+	default:
+		return fmt.Errorf("unsupported auth type: %s", a.config.AuthType)
+	}
+	return nil
 }
 
 // CSRFToken returns the cached CSRF token.

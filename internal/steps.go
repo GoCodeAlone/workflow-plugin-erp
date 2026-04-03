@@ -13,16 +13,16 @@ type entityReadStep struct{ providerName string }
 func (s *entityReadStep) Execute(ctx context.Context, _ map[string]any, _ map[string]map[string]any, current, _ map[string]any, _ map[string]any) (*sdk.StepResult, error) {
 	p, err := getProvider(s.providerName)
 	if err != nil {
-		return nil, err
+		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
 	entitySet := stringFrom(current, "entity_set")
 	key := stringFrom(current, "key")
 	if entitySet == "" || key == "" {
-		return nil, fmt.Errorf("entity_set and key are required")
+		return &sdk.StepResult{Output: map[string]any{"error": "entity_set and key are required"}}, nil
 	}
 	entity, err := p.erp.ReadEntity(ctx, entitySet, key)
 	if err != nil {
-		return nil, fmt.Errorf("read entity: %w", err)
+		return &sdk.StepResult{Output: map[string]any{"error": fmt.Sprintf("read entity: %v", err)}}, nil
 	}
 	return &sdk.StepResult{Output: map[string]any{"entity": entity}}, nil
 }
@@ -33,11 +33,11 @@ type entityQueryStep struct{ providerName string }
 func (s *entityQueryStep) Execute(ctx context.Context, _ map[string]any, _ map[string]map[string]any, current, _ map[string]any, _ map[string]any) (*sdk.StepResult, error) {
 	p, err := getProvider(s.providerName)
 	if err != nil {
-		return nil, err
+		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
 	entitySet := stringFrom(current, "entity_set")
 	if entitySet == "" {
-		return nil, fmt.Errorf("entity_set is required")
+		return &sdk.StepResult{Output: map[string]any{"error": "entity_set is required"}}, nil
 	}
 	opts := QueryOptions{
 		Filter:  stringFrom(current, "filter"),
@@ -49,7 +49,7 @@ func (s *entityQueryStep) Execute(ctx context.Context, _ map[string]any, _ map[s
 	}
 	result, err := p.erp.QueryEntities(ctx, entitySet, opts)
 	if err != nil {
-		return nil, fmt.Errorf("query entities: %w", err)
+		return &sdk.StepResult{Output: map[string]any{"error": fmt.Sprintf("query entities: %v", err)}}, nil
 	}
 	out := map[string]any{
 		"results":  result.Results,
@@ -65,19 +65,19 @@ type entityCreateStep struct{ providerName string }
 func (s *entityCreateStep) Execute(ctx context.Context, _ map[string]any, _ map[string]map[string]any, current, _ map[string]any, _ map[string]any) (*sdk.StepResult, error) {
 	p, err := getProvider(s.providerName)
 	if err != nil {
-		return nil, err
+		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
 	entitySet := stringFrom(current, "entity_set")
 	data := mapFrom(current, "data")
 	if entitySet == "" {
-		return nil, fmt.Errorf("entity_set is required")
+		return &sdk.StepResult{Output: map[string]any{"error": "entity_set is required"}}, nil
 	}
 	if data == nil {
-		return nil, fmt.Errorf("data is required")
+		return &sdk.StepResult{Output: map[string]any{"error": "data is required"}}, nil
 	}
 	created, err := p.erp.CreateEntity(ctx, entitySet, data)
 	if err != nil {
-		return nil, fmt.Errorf("create entity: %w", err)
+		return &sdk.StepResult{Output: map[string]any{"error": fmt.Sprintf("create entity: %v", err)}}, nil
 	}
 	return &sdk.StepResult{Output: map[string]any{"entity": created}}, nil
 }
@@ -88,19 +88,19 @@ type entityUpdateStep struct{ providerName string }
 func (s *entityUpdateStep) Execute(ctx context.Context, _ map[string]any, _ map[string]map[string]any, current, _ map[string]any, _ map[string]any) (*sdk.StepResult, error) {
 	p, err := getProvider(s.providerName)
 	if err != nil {
-		return nil, err
+		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
 	entitySet := stringFrom(current, "entity_set")
 	key := stringFrom(current, "key")
 	data := mapFrom(current, "data")
 	if entitySet == "" || key == "" {
-		return nil, fmt.Errorf("entity_set and key are required")
+		return &sdk.StepResult{Output: map[string]any{"error": "entity_set and key are required"}}, nil
 	}
 	if data == nil {
-		return nil, fmt.Errorf("data is required")
+		return &sdk.StepResult{Output: map[string]any{"error": "data is required"}}, nil
 	}
 	if err := p.erp.UpdateEntity(ctx, entitySet, key, data); err != nil {
-		return nil, fmt.Errorf("update entity: %w", err)
+		return &sdk.StepResult{Output: map[string]any{"error": fmt.Sprintf("update entity: %v", err)}}, nil
 	}
 	return &sdk.StepResult{Output: map[string]any{"ok": true}}, nil
 }
@@ -111,15 +111,15 @@ type entityDeleteStep struct{ providerName string }
 func (s *entityDeleteStep) Execute(ctx context.Context, _ map[string]any, _ map[string]map[string]any, current, _ map[string]any, _ map[string]any) (*sdk.StepResult, error) {
 	p, err := getProvider(s.providerName)
 	if err != nil {
-		return nil, err
+		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
 	entitySet := stringFrom(current, "entity_set")
 	key := stringFrom(current, "key")
 	if entitySet == "" || key == "" {
-		return nil, fmt.Errorf("entity_set and key are required")
+		return &sdk.StepResult{Output: map[string]any{"error": "entity_set and key are required"}}, nil
 	}
 	if err := p.erp.DeleteEntity(ctx, entitySet, key); err != nil {
-		return nil, fmt.Errorf("delete entity: %w", err)
+		return &sdk.StepResult{Output: map[string]any{"error": fmt.Sprintf("delete entity: %v", err)}}, nil
 	}
 	return &sdk.StepResult{Output: map[string]any{"ok": true}}, nil
 }
@@ -130,11 +130,11 @@ type batchStep struct{ providerName string }
 func (s *batchStep) Execute(ctx context.Context, _ map[string]any, _ map[string]map[string]any, current, _ map[string]any, _ map[string]any) (*sdk.StepResult, error) {
 	p, err := getProvider(s.providerName)
 	if err != nil {
-		return nil, err
+		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
 	rawOps := sliceFrom(current, "operations")
 	if len(rawOps) == 0 {
-		return nil, fmt.Errorf("operations array is required")
+		return &sdk.StepResult{Output: map[string]any{"error": "operations array is required"}}, nil
 	}
 	ops := make([]BatchOp, 0, len(rawOps))
 	for _, raw := range rawOps {
@@ -152,7 +152,7 @@ func (s *batchStep) Execute(ctx context.Context, _ map[string]any, _ map[string]
 	}
 	results, err := p.erp.BatchOperation(ctx, ops)
 	if err != nil {
-		return nil, fmt.Errorf("batch: %w", err)
+		return &sdk.StepResult{Output: map[string]any{"error": fmt.Sprintf("batch: %v", err)}}, nil
 	}
 	out := make([]map[string]any, len(results))
 	for i, r := range results {
@@ -171,16 +171,16 @@ type functionCallStep struct{ providerName string }
 func (s *functionCallStep) Execute(ctx context.Context, _ map[string]any, _ map[string]map[string]any, current, _ map[string]any, _ map[string]any) (*sdk.StepResult, error) {
 	p, err := getProvider(s.providerName)
 	if err != nil {
-		return nil, err
+		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
 	name := stringFrom(current, "function_name")
 	if name == "" {
-		return nil, fmt.Errorf("function_name is required")
+		return &sdk.StepResult{Output: map[string]any{"error": "function_name is required"}}, nil
 	}
 	params := mapFrom(current, "params")
 	result, err := p.erp.CallFunction(ctx, name, params)
 	if err != nil {
-		return nil, fmt.Errorf("function call: %w", err)
+		return &sdk.StepResult{Output: map[string]any{"error": fmt.Sprintf("function call: %v", err)}}, nil
 	}
 	return &sdk.StepResult{Output: map[string]any{"result": result}}, nil
 }
@@ -191,11 +191,11 @@ type metadataStep struct{ providerName string }
 func (s *metadataStep) Execute(ctx context.Context, _ map[string]any, _ map[string]map[string]any, _ map[string]any, _ map[string]any, _ map[string]any) (*sdk.StepResult, error) {
 	p, err := getProvider(s.providerName)
 	if err != nil {
-		return nil, err
+		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
 	metadata, err := p.erp.GetMetadata(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("metadata: %w", err)
+		return &sdk.StepResult{Output: map[string]any{"error": fmt.Sprintf("metadata: %v", err)}}, nil
 	}
 	return &sdk.StepResult{Output: map[string]any{"metadata": metadata}}, nil
 }
@@ -206,18 +206,18 @@ type rawRequestStep struct{ providerName string }
 func (s *rawRequestStep) Execute(ctx context.Context, _ map[string]any, _ map[string]map[string]any, current, _ map[string]any, _ map[string]any) (*sdk.StepResult, error) {
 	p, err := getProvider(s.providerName)
 	if err != nil {
-		return nil, err
+		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
 	method := strOr(current, "method", "GET")
 	path := stringFrom(current, "path")
 	if path == "" {
-		return nil, fmt.Errorf("path is required")
+		return &sdk.StepResult{Output: map[string]any{"error": "path is required"}}, nil
 	}
 	body := mapFrom(current, "body")
 	headers := stringMapFrom(current, "headers")
 	status, respBody, err := p.erp.RawRequest(ctx, method, path, body, headers)
 	if err != nil {
-		return nil, fmt.Errorf("raw request: %w", err)
+		return &sdk.StepResult{Output: map[string]any{"error": fmt.Sprintf("raw request: %v", err)}}, nil
 	}
 	return &sdk.StepResult{Output: map[string]any{
 		"status_code": status,

@@ -230,6 +230,60 @@ func TestODataClient_RawRequest(t *testing.T) {
 	}
 }
 
+func TestODataClient_CallFunction_StringParams(t *testing.T) {
+	var gotPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.RawPath
+		if gotPath == "" {
+			gotPath = r.URL.Path
+		}
+		json.NewEncoder(w).Encode(map[string]any{"result": "ok"})
+	}))
+	defer srv.Close()
+
+	c := NewODataClient(srv.URL, srv.Client(), nil)
+
+	// Single string param — should be single-quoted and URL-encoded
+	result, err := c.CallFunction(context.Background(), "GetPartner", map[string]any{
+		"name": "Acme Corp",
+	})
+	if err != nil {
+		t.Fatalf("CallFunction failed: %v", err)
+	}
+	if result["result"] != "ok" {
+		t.Errorf("unexpected result: %v", result)
+	}
+	// Path should contain the single-quoted, encoded parameter
+	if !contains(gotPath, "name='Acme") {
+		t.Errorf("expected single-quoted string param in path, got %q", gotPath)
+	}
+
+	// Param with embedded single quote — should be escaped as ''
+	_, err = c.CallFunction(context.Background(), "Search", map[string]any{
+		"query": "O'Reilly",
+	})
+	if err != nil {
+		t.Fatalf("CallFunction with quote failed: %v", err)
+	}
+	if !contains(gotPath, "query='O") {
+		t.Errorf("expected escaped quote in path, got %q", gotPath)
+	}
+
+	// Numeric param should NOT be quoted
+	_, err = c.CallFunction(context.Background(), "GetPrice", map[string]any{
+		"amount": 42,
+	})
+	if err != nil {
+		t.Fatalf("CallFunction with int failed: %v", err)
+	}
+	if contains(gotPath, "'42'") {
+		t.Errorf("numeric param should not be quoted, got %q", gotPath)
+	}
+	if !contains(gotPath, "amount=42") {
+		t.Errorf("expected amount=42 in path, got %q", gotPath)
+	}
+}
+
 func TestODataClient_HTTPError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
