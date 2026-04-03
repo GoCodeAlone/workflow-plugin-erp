@@ -1,0 +1,20 @@
+{
+    "name": "workflow-plugin-TEMPLATE",
+    "version": "0.1.0",
+    "description": "TEMPLATE plugin for the workflow engine",
+    "author": "GoCodeAlone",
+    "license": "MIT",
+    "type": "external",
+    "tier": "community",
+    "private": false,
+    "minEngineVersion": "0.3.55",
+    "keywords": [],
+    "homepage": "https://github.com/GoCodeAlone/workflow-plugin-TEMPLATE",
+    "repository": "https://github.com/GoCodeAlone/workflow-plugin-TEMPLATE",
+    "capabilities": {
+        "configProvider": false,
+        "moduleTypes": [],
+        "stepTypes": [],
+        "triggerTypes": []
+    }
+}
