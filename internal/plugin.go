@@ -6,10 +6,14 @@ import (
 	sdk "github.com/GoCodeAlone/workflow/plugin/external/sdk"
 )
 
+// Version is set at build time via -ldflags
+// "-X github.com/GoCodeAlone/workflow-plugin-erp/internal.Version=X.Y.Z"
+var Version = "dev"
+
 // Manifest is the plugin manifest exported for tests.
 var Manifest = sdk.PluginManifest{
 	Name:        "workflow-plugin-erp",
-	Version:     "0.1.0",
+	Version:     Version,
 	Description: "Enterprise ERP integration (SAP S/4HANA via OData v4)",
 	Author:      "GoCodeAlone",
 }
