@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package erp.v1;
 
+import "google/protobuf/struct.proto";
+
 option go_package = "github.com/GoCodeAlone/workflow-plugin-erp/proto/erp/v1;erpv1";
 
 // ProviderConfig is the typed configuration for the erp.provider module.
@@ -44,8 +46,8 @@ message EntityReadInput {
 
 // EntityReadOutput is the typed output for step.erp_entity_read.
 message EntityReadOutput {
-  // entity contains the returned entity fields as a JSON-compatible struct.
-  map<string, string> entity = 1;
+  // entity contains the returned entity fields as an arbitrary JSON object.
+  google.protobuf.Struct entity = 1;
   // error carries the error message when the read fails.
   string error = 2;
 }
@@ -72,8 +74,8 @@ message EntityQueryInput {
 
 // EntityQueryOutput is the typed output for step.erp_entity_query.
 message EntityQueryOutput {
-  // results is the list of matched entity records.
-  repeated bytes results = 1;
+  // results is the list of matched entity records as arbitrary JSON objects.
+  repeated google.protobuf.Struct results = 1;
   // count is the total number of entities available (OData @odata.count).
   int64 count = 2;
   // next_link is the OData nextLink for server-side paging.
@@ -88,14 +90,14 @@ message EntityQueryOutput {
 message EntityCreateInput {
   // entity_set is the OData entity set name.
   string entity_set = 1;
-  // data contains the field values for the new entity (JSON-encoded).
-  bytes data = 2;
+  // data contains the field values for the new entity as an arbitrary JSON object.
+  google.protobuf.Struct data = 2;
 }
 
 // EntityCreateOutput is the typed output for step.erp_entity_create.
 message EntityCreateOutput {
-  // entity contains the created entity fields as returned by the server.
-  map<string, string> entity = 1;
+  // entity contains the created entity fields as an arbitrary JSON object.
+  google.protobuf.Struct entity = 1;
   // error carries the error message when the create fails.
   string error = 2;
 }
@@ -108,8 +110,8 @@ message EntityUpdateInput {
   string entity_set = 1;
   // key is the OData entity key expression.
   string key = 2;
-  // data contains the field values to update (JSON-encoded).
-  bytes data = 3;
+  // data contains the field values to update as an arbitrary JSON object.
+  google.protobuf.Struct data = 3;
 }
 
 // EntityUpdateOutput is the typed output for step.erp_entity_update.
@@ -148,8 +150,8 @@ message BatchOperation {
   string entity_set = 2;
   // key is the OData entity key expression (for read/update/delete operations).
   string key = 3;
-  // body contains the request body fields for POST/PATCH/PUT (JSON-encoded).
-  bytes body = 4;
+  // body contains the request body fields for POST/PATCH/PUT as an arbitrary JSON object.
+  google.protobuf.Struct body = 4;
   // content_id is an optional OData $batch content reference ID.
   string content_id = 5;
 }
@@ -166,8 +168,8 @@ message BatchResultItem {
   string content_id = 1;
   // status_code is the HTTP status code returned for this operation.
   int32 status_code = 2;
-  // body contains the response body (JSON-encoded).
-  bytes body = 3;
+  // body contains the response body as an arbitrary JSON object.
+  google.protobuf.Struct body = 3;
 }
 
 // BatchOutput is the typed output for step.erp_batch.
@@ -184,14 +186,14 @@ message BatchOutput {
 message FunctionCallInput {
   // function_name is the name of the OData function or action to invoke.
   string function_name = 1;
-  // params contains the function parameters (JSON-encoded).
-  bytes params = 2;
+  // params contains the function parameters as an arbitrary JSON object.
+  google.protobuf.Struct params = 2;
 }
 
 // FunctionCallOutput is the typed output for step.erp_function_call.
 message FunctionCallOutput {
-  // result contains the function return value (JSON-encoded).
-  bytes result = 1;
+  // result contains the function return value as an arbitrary JSON object.
+  google.protobuf.Struct result = 1;
   // error carries the error message when the function call fails.
   string error = 2;
 }
@@ -203,8 +205,8 @@ message MetadataInput {}
 
 // MetadataOutput is the typed output for step.erp_metadata.
 message MetadataOutput {
-  // metadata contains the parsed OData $metadata document (JSON-encoded).
-  bytes metadata = 1;
+  // metadata contains the OData $metadata document as an XML string.
+  string metadata = 1;
   // error carries the error message when fetching metadata fails.
   string error = 2;
 }
@@ -217,8 +219,8 @@ message RawRequestInput {
   string method = 1;
   // path is the URL path relative to the provider base URL.
   string path = 2;
-  // body contains the request body for POST/PATCH/PUT (JSON-encoded).
-  bytes body = 3;
+  // body contains the request body for POST/PATCH/PUT as an arbitrary JSON object.
+  google.protobuf.Struct body = 3;
   // headers contains additional HTTP headers to send with the request.
   map<string, string> headers = 4;
 }
@@ -227,8 +229,8 @@ message RawRequestInput {
 message RawRequestOutput {
   // status_code is the HTTP status code of the response.
   int32 status_code = 1;
-  // body contains the raw response body (JSON-encoded).
-  bytes body = 2;
+  // body contains the parsed response body as an arbitrary JSON object.
+  google.protobuf.Struct body = 2;
   // error carries the error message when the request fails.
   string error = 3;
 }

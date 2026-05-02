@@ -144,3 +144,29 @@ func stringMapFrom(m map[string]any, key string) map[string]string {
 	}
 	return result
 }
+
+// strFromKeys returns the first non-empty string value found for any of the
+// provided keys. It is used to accept both legacy snake_case keys (e.g.
+// "entity_set") and the camelCase equivalents produced by proto JSON encoding
+// (e.g. "entitySet") without breaking existing callers. The keys are tried in
+// order; the first non-empty match wins. When only one key is set, the result
+// is unambiguous. When both are set, the first key takes precedence.
+func strFromKeys(m map[string]any, keys ...string) string {
+	for _, k := range keys {
+		if v, _ := m[k].(string); v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+// Key-name constants for proto JSON (camelCase) and legacy (snake_case) forms.
+// These are used with strFromKeys to accept either form at step input boundaries.
+const (
+	keyEntitySet      = "entity_set"
+	keyEntitySetCC    = "entitySet"
+	keyContentID      = "content_id"
+	keyContentIDCC    = "contentId"
+	keyFunctionName   = "function_name"
+	keyFunctionNameCC = "functionName"
+)

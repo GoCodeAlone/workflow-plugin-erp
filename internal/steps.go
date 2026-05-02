@@ -15,7 +15,7 @@ func (s *entityReadStep) Execute(ctx context.Context, _ map[string]any, _ map[st
 	if err != nil {
 		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
-	entitySet := stringFrom(current, "entity_set")
+	entitySet := strFromKeys(current, keyEntitySet, keyEntitySetCC)
 	key := stringFrom(current, "key")
 	if entitySet == "" || key == "" {
 		return &sdk.StepResult{Output: map[string]any{"error": "entity_set and key are required"}}, nil
@@ -35,7 +35,7 @@ func (s *entityQueryStep) Execute(ctx context.Context, _ map[string]any, _ map[s
 	if err != nil {
 		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
-	entitySet := stringFrom(current, "entity_set")
+	entitySet := strFromKeys(current, keyEntitySet, keyEntitySetCC)
 	if entitySet == "" {
 		return &sdk.StepResult{Output: map[string]any{"error": "entity_set is required"}}, nil
 	}
@@ -67,7 +67,7 @@ func (s *entityCreateStep) Execute(ctx context.Context, _ map[string]any, _ map[
 	if err != nil {
 		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
-	entitySet := stringFrom(current, "entity_set")
+	entitySet := strFromKeys(current, keyEntitySet, keyEntitySetCC)
 	data := mapFrom(current, "data")
 	if entitySet == "" {
 		return &sdk.StepResult{Output: map[string]any{"error": "entity_set is required"}}, nil
@@ -90,7 +90,7 @@ func (s *entityUpdateStep) Execute(ctx context.Context, _ map[string]any, _ map[
 	if err != nil {
 		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
-	entitySet := stringFrom(current, "entity_set")
+	entitySet := strFromKeys(current, keyEntitySet, keyEntitySetCC)
 	key := stringFrom(current, "key")
 	data := mapFrom(current, "data")
 	if entitySet == "" || key == "" {
@@ -113,7 +113,7 @@ func (s *entityDeleteStep) Execute(ctx context.Context, _ map[string]any, _ map[
 	if err != nil {
 		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
-	entitySet := stringFrom(current, "entity_set")
+	entitySet := strFromKeys(current, keyEntitySet, keyEntitySetCC)
 	key := stringFrom(current, "key")
 	if entitySet == "" || key == "" {
 		return &sdk.StepResult{Output: map[string]any{"error": "entity_set and key are required"}}, nil
@@ -138,16 +138,16 @@ func (s *batchStep) Execute(ctx context.Context, _ map[string]any, _ map[string]
 	}
 	ops := make([]BatchOp, 0, len(rawOps))
 	for _, raw := range rawOps {
-		m, ok := raw.(map[string]any)
+		op, ok := raw.(map[string]any)
 		if !ok {
 			continue
 		}
 		ops = append(ops, BatchOp{
-			Method:    stringFrom(m, "method"),
-			EntitySet: stringFrom(m, "entity_set"),
-			Key:       stringFrom(m, "key"),
-			Body:      mapFrom(m, "body"),
-			ContentID: stringFrom(m, "content_id"),
+			Method:    stringFrom(op, "method"),
+			EntitySet: strFromKeys(op, keyEntitySet, keyEntitySetCC),
+			Key:       stringFrom(op, "key"),
+			Body:      mapFrom(op, "body"),
+			ContentID: strFromKeys(op, keyContentID, keyContentIDCC),
 		})
 	}
 	results, err := p.erp.BatchOperation(ctx, ops)
@@ -173,7 +173,7 @@ func (s *functionCallStep) Execute(ctx context.Context, _ map[string]any, _ map[
 	if err != nil {
 		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
-	name := stringFrom(current, "function_name")
+	name := strFromKeys(current, keyFunctionName, keyFunctionNameCC)
 	if name == "" {
 		return &sdk.StepResult{Output: map[string]any{"error": "function_name is required"}}, nil
 	}
