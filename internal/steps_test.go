@@ -282,8 +282,171 @@ func TestRawRequestStep(t *testing.T) {
 	}
 }
 
-func TestStepWithMissingProvider(t *testing.T) {
-	step := &entityReadStep{providerName: "nonexistent-provider"}
+// --- camelCase alias tests (proto-JSON compatibility) ---
+
+func TestEntityReadStep_CamelCaseInput(t *testing.T) {
+	mock := &testERPProvider{
+		readEntity: func(_ context.Context, es, key string) (map[string]any, error) {
+			return map[string]any{"ID": key, "EntitySet": es}, nil
+		},
+	}
+	registerTestProvider(t, "test-read-cc", mock)
+
+	step := &entityReadStep{providerName: "test-read-cc"}
+	result := execStep(t, step, map[string]any{
+		"entitySet": "Orders", // camelCase proto-JSON form
+		"key":       "'42'",
+	})
+	entity := result.Output["entity"].(map[string]any)
+	if entity["ID"] != "'42'" {
+		t.Errorf("unexpected ID: %v", entity["ID"])
+	}
+}
+
+func TestEntityQueryStep_CamelCaseInput(t *testing.T) {
+	mock := &testERPProvider{
+		queryEntites: func(_ context.Context, es string, _ QueryOptions) (*QueryResult, error) {
+			return &QueryResult{Results: []map[string]any{{"ID": "1"}}, Count: 1}, nil
+		},
+	}
+	registerTestProvider(t, "test-query-cc", mock)
+
+	step := &entityQueryStep{providerName: "test-query-cc"}
+	result := execStep(t, step, map[string]any{
+		"entitySet": "Products", // camelCase proto-JSON form
+	})
+	if _, ok := result.Output["results"]; !ok {
+		t.Error("expected results in output")
+	}
+}
+
+func TestEntityCreateStep_CamelCaseInput(t *testing.T) {
+	mock := &testERPProvider{
+		createEntity: func(_ context.Context, es string, data map[string]any) (map[string]any, error) {
+			data["ID"] = "CC"
+			return data, nil
+		},
+	}
+	registerTestProvider(t, "test-create-cc", mock)
+
+	step := &entityCreateStep{providerName: "test-create-cc"}
+	result := execStep(t, step, map[string]any{
+		"entitySet": "Orders", // camelCase proto-JSON form
+		"data":      map[string]any{"Name": "test"},
+	})
+	entity := result.Output["entity"].(map[string]any)
+	if entity["ID"] != "CC" {
+		t.Errorf("unexpected ID: %v", entity["ID"])
+	}
+}
+
+func TestEntityDeleteStep_CamelCaseInput(t *testing.T) {
+	called := false
+	mock := &testERPProvider{
+		deleteEntity: func(_ context.Context, es, key string) error {
+			called = true
+			return nil
+		},
+	}
+	registerTestProvider(t, "test-delete-cc", mock)
+
+	step := &entityDeleteStep{providerName: "test-delete-cc"}
+	result := execStep(t, step, map[string]any{
+		"entitySet": "Orders", // camelCase proto-JSON form
+		"key":       "'5'",
+	})
+	if !called {
+		t.Error("delete was not called")
+	}
+	if result.Output["ok"] != true {
+		t.Errorf("expected ok=true")
+	}
+}
+
+func TestBatchStep_CamelCaseInput(t *testing.T) {
+	var gotOps []BatchOp
+	mock := &testERPProvider{
+		batchOp: func(_ context.Context, ops []BatchOp) ([]BatchResult, error) {
+			gotOps = ops
+			return []BatchResult{{ContentID: "req1", StatusCode: 201}}, nil
+		},
+	}
+	registerTestProvider(t, "test-batch-cc", mock)
+
+	step := &batchStep{providerName: "test-batch-cc"}
+	result := execStep(t, step, map[string]any{
+		"operations": []any{
+			map[string]any{
+				"method":    "POST",
+				"entitySet": "Orders",  // camelCase proto-JSON form
+				"contentId": "req1",    // camelCase proto-JSON form
+			},
+		},
+	})
+	if len(gotOps) != 1 {
+		t.Fatalf("expected 1 op, got %d", len(gotOps))
+	}
+	if gotOps[0].EntitySet != "Orders" {
+		t.Errorf("unexpected EntitySet: %v", gotOps[0].EntitySet)
+	}
+	if gotOps[0].ContentID != "req1" {
+		t.Errorf("unexpected ContentID: %v", gotOps[0].ContentID)
+	}
+	// Verify both camelCase and snake_case output keys are present.
+	results := result.Output["results"].([]map[string]any)
+	if results[0]["contentId"] != "req1" {
+		t.Errorf("expected contentId=req1, got %v", results[0]["contentId"])
+	}
+	if results[0]["statusCode"] != 201 {
+		t.Errorf("expected statusCode=201, got %v", results[0]["statusCode"])
+	}
+	// Legacy keys must still be present for backward compatibility.
+	if results[0]["content_id"] != "req1" {
+		t.Errorf("expected content_id=req1, got %v", results[0]["content_id"])
+	}
+	if results[0]["status_code"] != 201 {
+		t.Errorf("expected status_code=201, got %v", results[0]["status_code"])
+	}
+}
+
+func TestFunctionCallStep_CamelCaseInput(t *testing.T) {
+	mock := &testERPProvider{
+		callFunc: func(_ context.Context, name string, _ map[string]any) (map[string]any, error) {
+			return map[string]any{"called": name}, nil
+		},
+	}
+	registerTestProvider(t, "test-func-cc", mock)
+
+	step := &functionCallStep{providerName: "test-func-cc"}
+	result := execStep(t, step, map[string]any{
+		"functionName": "GetPrice", // camelCase proto-JSON form
+	})
+	fnResult := result.Output["result"].(map[string]any)
+	if fnResult["called"] != "GetPrice" {
+		t.Errorf("unexpected called: %v", fnResult["called"])
+	}
+}
+
+func TestRawRequestStep_OutputContainsBothStatusKeys(t *testing.T) {
+	mock := &testERPProvider{
+		rawRequest: func(_ context.Context, _, _ string, _ map[string]any, _ map[string]string) (int, map[string]any, error) {
+			return 204, nil, nil
+		},
+	}
+	registerTestProvider(t, "test-raw-cc", mock)
+
+	step := &rawRequestStep{providerName: "test-raw-cc"}
+	result := execStep(t, step, map[string]any{"path": "/ping"})
+	// Both camelCase (proto-JSON contract) and legacy snake_case must be present.
+	if result.Output["statusCode"] != 204 {
+		t.Errorf("expected statusCode=204, got %v", result.Output["statusCode"])
+	}
+	if result.Output["status_code"] != 204 {
+		t.Errorf("expected status_code=204, got %v", result.Output["status_code"])
+	}
+}
+
+func TestStepWithMissingProvider(t *testing.T) {	step := &entityReadStep{providerName: "nonexistent-provider"}
 	result, err := step.Execute(context.Background(), nil, nil, map[string]any{
 		"entity_set": "X",
 		"key":        "Y",

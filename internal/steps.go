@@ -15,10 +15,10 @@ func (s *entityReadStep) Execute(ctx context.Context, _ map[string]any, _ map[st
 	if err != nil {
 		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
-	entitySet := stringFrom(current, "entity_set")
+	entitySet := strFromKeys(current, keyEntitySet, keyEntitySetCC)
 	key := stringFrom(current, "key")
 	if entitySet == "" || key == "" {
-		return &sdk.StepResult{Output: map[string]any{"error": "entity_set and key are required"}}, nil
+		return &sdk.StepResult{Output: map[string]any{"error": "entity_set (or entitySet) and key are required"}}, nil
 	}
 	entity, err := p.erp.ReadEntity(ctx, entitySet, key)
 	if err != nil {
@@ -35,9 +35,9 @@ func (s *entityQueryStep) Execute(ctx context.Context, _ map[string]any, _ map[s
 	if err != nil {
 		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
-	entitySet := stringFrom(current, "entity_set")
+	entitySet := strFromKeys(current, keyEntitySet, keyEntitySetCC)
 	if entitySet == "" {
-		return &sdk.StepResult{Output: map[string]any{"error": "entity_set is required"}}, nil
+		return &sdk.StepResult{Output: map[string]any{"error": "entity_set (or entitySet) is required"}}, nil
 	}
 	opts := QueryOptions{
 		Filter:  stringFrom(current, "filter"),
@@ -67,10 +67,10 @@ func (s *entityCreateStep) Execute(ctx context.Context, _ map[string]any, _ map[
 	if err != nil {
 		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
-	entitySet := stringFrom(current, "entity_set")
+	entitySet := strFromKeys(current, keyEntitySet, keyEntitySetCC)
 	data := mapFrom(current, "data")
 	if entitySet == "" {
-		return &sdk.StepResult{Output: map[string]any{"error": "entity_set is required"}}, nil
+		return &sdk.StepResult{Output: map[string]any{"error": "entity_set (or entitySet) is required"}}, nil
 	}
 	if data == nil {
 		return &sdk.StepResult{Output: map[string]any{"error": "data is required"}}, nil
@@ -90,11 +90,11 @@ func (s *entityUpdateStep) Execute(ctx context.Context, _ map[string]any, _ map[
 	if err != nil {
 		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
-	entitySet := stringFrom(current, "entity_set")
+	entitySet := strFromKeys(current, keyEntitySet, keyEntitySetCC)
 	key := stringFrom(current, "key")
 	data := mapFrom(current, "data")
 	if entitySet == "" || key == "" {
-		return &sdk.StepResult{Output: map[string]any{"error": "entity_set and key are required"}}, nil
+		return &sdk.StepResult{Output: map[string]any{"error": "entity_set (or entitySet) and key are required"}}, nil
 	}
 	if data == nil {
 		return &sdk.StepResult{Output: map[string]any{"error": "data is required"}}, nil
@@ -113,10 +113,10 @@ func (s *entityDeleteStep) Execute(ctx context.Context, _ map[string]any, _ map[
 	if err != nil {
 		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
-	entitySet := stringFrom(current, "entity_set")
+	entitySet := strFromKeys(current, keyEntitySet, keyEntitySetCC)
 	key := stringFrom(current, "key")
 	if entitySet == "" || key == "" {
-		return &sdk.StepResult{Output: map[string]any{"error": "entity_set and key are required"}}, nil
+		return &sdk.StepResult{Output: map[string]any{"error": "entity_set (or entitySet) and key are required"}}, nil
 	}
 	if err := p.erp.DeleteEntity(ctx, entitySet, key); err != nil {
 		return &sdk.StepResult{Output: map[string]any{"error": fmt.Sprintf("delete entity: %v", err)}}, nil
@@ -138,16 +138,16 @@ func (s *batchStep) Execute(ctx context.Context, _ map[string]any, _ map[string]
 	}
 	ops := make([]BatchOp, 0, len(rawOps))
 	for _, raw := range rawOps {
-		m, ok := raw.(map[string]any)
+		op, ok := raw.(map[string]any)
 		if !ok {
 			continue
 		}
 		ops = append(ops, BatchOp{
-			Method:    stringFrom(m, "method"),
-			EntitySet: stringFrom(m, "entity_set"),
-			Key:       stringFrom(m, "key"),
-			Body:      mapFrom(m, "body"),
-			ContentID: stringFrom(m, "content_id"),
+			Method:    stringFrom(op, "method"),
+			EntitySet: strFromKeys(op, keyEntitySet, keyEntitySetCC),
+			Key:       stringFrom(op, "key"),
+			Body:      mapFrom(op, "body"),
+			ContentID: strFromKeys(op, keyContentID, keyContentIDCC),
 		})
 	}
 	results, err := p.erp.BatchOperation(ctx, ops)
@@ -157,8 +157,12 @@ func (s *batchStep) Execute(ctx context.Context, _ map[string]any, _ map[string]
 	out := make([]map[string]any, len(results))
 	for i, r := range results {
 		out[i] = map[string]any{
+			// Emit both legacy snake_case and proto-JSON camelCase forms for
+			// backward compatibility and strict-contract consumer compatibility.
 			"content_id":  r.ContentID,
+			"contentId":   r.ContentID,
 			"status_code": r.StatusCode,
+			"statusCode":  r.StatusCode,
 			"body":        r.Body,
 		}
 	}
@@ -173,9 +177,9 @@ func (s *functionCallStep) Execute(ctx context.Context, _ map[string]any, _ map[
 	if err != nil {
 		return &sdk.StepResult{Output: map[string]any{"error": err.Error()}}, nil
 	}
-	name := stringFrom(current, "function_name")
+	name := strFromKeys(current, keyFunctionName, keyFunctionNameCC)
 	if name == "" {
-		return &sdk.StepResult{Output: map[string]any{"error": "function_name is required"}}, nil
+		return &sdk.StepResult{Output: map[string]any{"error": "function_name (or functionName) is required"}}, nil
 	}
 	params := mapFrom(current, "params")
 	result, err := p.erp.CallFunction(ctx, name, params)
@@ -220,7 +224,10 @@ func (s *rawRequestStep) Execute(ctx context.Context, _ map[string]any, _ map[st
 		return &sdk.StepResult{Output: map[string]any{"error": fmt.Sprintf("raw request: %v", err)}}, nil
 	}
 	return &sdk.StepResult{Output: map[string]any{
+		// Emit both legacy snake_case and proto-JSON camelCase forms for
+		// backward compatibility and strict-contract consumer compatibility.
 		"status_code": status,
+		"statusCode":  status,
 		"body":        respBody,
 	}}, nil
 }

@@ -1,0 +1,83 @@
+{
+  "version": "1",
+  "contracts": [
+    {
+      "kind": "module",
+      "type": "erp.provider",
+      "mode": "strict",
+      "config": "erp.v1.ProviderConfig"
+    },
+    {
+      "kind": "step",
+      "type": "step.erp_entity_read",
+      "mode": "strict",
+      "config": "erp.v1.StepConfig",
+      "input": "erp.v1.EntityReadInput",
+      "output": "erp.v1.EntityReadOutput"
+    },
+    {
+      "kind": "step",
+      "type": "step.erp_entity_query",
+      "mode": "strict",
+      "config": "erp.v1.StepConfig",
+      "input": "erp.v1.EntityQueryInput",
+      "output": "erp.v1.EntityQueryOutput"
+    },
+    {
+      "kind": "step",
+      "type": "step.erp_entity_create",
+      "mode": "strict",
+      "config": "erp.v1.StepConfig",
+      "input": "erp.v1.EntityCreateInput",
+      "output": "erp.v1.EntityCreateOutput"
+    },
+    {
+      "kind": "step",
+      "type": "step.erp_entity_update",
+      "mode": "strict",
+      "config": "erp.v1.StepConfig",
+      "input": "erp.v1.EntityUpdateInput",
+      "output": "erp.v1.EntityUpdateOutput"
+    },
+    {
+      "kind": "step",
+      "type": "step.erp_entity_delete",
+      "mode": "strict",
+      "config": "erp.v1.StepConfig",
+      "input": "erp.v1.EntityDeleteInput",
+      "output": "erp.v1.EntityDeleteOutput"
+    },
+    {
+      "kind": "step",
+      "type": "step.erp_batch",
+      "mode": "strict",
+      "config": "erp.v1.StepConfig",
+      "input": "erp.v1.BatchInput",
+      "output": "erp.v1.BatchOutput"
+    },
+    {
+      "kind": "step",
+      "type": "step.erp_function_call",
+      "mode": "strict",
+      "config": "erp.v1.StepConfig",
+      "input": "erp.v1.FunctionCallInput",
+      "output": "erp.v1.FunctionCallOutput"
+    },
+    {
+      "kind": "step",
+      "type": "step.erp_metadata",
+      "mode": "strict",
+      "config": "erp.v1.StepConfig",
+      "input": "erp.v1.MetadataInput",
+      "output": "erp.v1.MetadataOutput"
+    },
+    {
+      "kind": "step",
+      "type": "step.erp_raw_request",
+      "mode": "strict",
+      "config": "erp.v1.StepConfig",
+      "input": "erp.v1.RawRequestInput",
+      "output": "erp.v1.RawRequestOutput"
+    }
+  ]
+}

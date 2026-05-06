@@ -1,0 +1,236 @@
+syntax = "proto3";
+
+package erp.v1;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/GoCodeAlone/workflow-plugin-erp/proto/erp/v1;erpv1";
+
+// ProviderConfig is the typed configuration for the erp.provider module.
+message ProviderConfig {
+  // baseUrl is the base URL of the OData v4 service endpoint.
+  string base_url = 1;
+  // authType selects the authentication strategy: basic, oauth2, or apikey.
+  string auth_type = 2;
+  // username is used for basic authentication.
+  string username = 3;
+  // password is used for basic authentication.
+  string password = 4;
+  // client_id is used for OAuth2 client credentials flow.
+  string client_id = 5;
+  // client_secret is used for OAuth2 client credentials flow.
+  string client_secret = 6;
+  // token_url is the OAuth2 token endpoint URL.
+  string token_url = 7;
+  // api_key is used for API key authentication.
+  string api_key = 8;
+  // fetch_csrf enables automatic SAP CSRF token fetching before mutating requests.
+  bool fetch_csrf = 9;
+}
+
+// StepConfig is the typed configuration shared by all ERP step types.
+message StepConfig {
+  // provider names the erp.provider module instance this step delegates to.
+  string provider = 1;
+}
+
+// ---- step.erp_entity_read ----
+
+// EntityReadInput is the typed input for step.erp_entity_read.
+message EntityReadInput {
+  // entity_set is the OData entity set name (e.g. "BusinessPartnerSet").
+  string entity_set = 1;
+  // key is the OData entity key expression (e.g. "BusinessPartner='12345'").
+  string key = 2;
+}
+
+// EntityReadOutput is the typed output for step.erp_entity_read.
+message EntityReadOutput {
+  // entity contains the returned entity fields as an arbitrary JSON object.
+  google.protobuf.Struct entity = 1;
+  // error carries the error message when the read fails.
+  string error = 2;
+}
+
+// ---- step.erp_entity_query ----
+
+// EntityQueryInput is the typed input for step.erp_entity_query.
+message EntityQueryInput {
+  // entity_set is the OData entity set name.
+  string entity_set = 1;
+  // filter is the OData $filter query option.
+  string filter = 2;
+  // select is the OData $select query option.
+  string select = 3;
+  // expand is the OData $expand query option.
+  string expand = 4;
+  // orderby is the OData $orderby query option.
+  string orderby = 5;
+  // top is the OData $top query option (maximum number of results).
+  int32 top = 6;
+  // skip is the OData $skip query option (number of results to skip).
+  int32 skip = 7;
+}
+
+// EntityQueryOutput is the typed output for step.erp_entity_query.
+message EntityQueryOutput {
+  // results is the list of matched entity records as arbitrary JSON objects.
+  repeated google.protobuf.Struct results = 1;
+  // count is the total number of entities available (OData @odata.count).
+  int64 count = 2;
+  // next_link is the OData nextLink for server-side paging.
+  string next_link = 3;
+  // error carries the error message when the query fails.
+  string error = 4;
+}
+
+// ---- step.erp_entity_create ----
+
+// EntityCreateInput is the typed input for step.erp_entity_create.
+message EntityCreateInput {
+  // entity_set is the OData entity set name.
+  string entity_set = 1;
+  // data contains the field values for the new entity as an arbitrary JSON object.
+  google.protobuf.Struct data = 2;
+}
+
+// EntityCreateOutput is the typed output for step.erp_entity_create.
+message EntityCreateOutput {
+  // entity contains the created entity fields as an arbitrary JSON object.
+  google.protobuf.Struct entity = 1;
+  // error carries the error message when the create fails.
+  string error = 2;
+}
+
+// ---- step.erp_entity_update ----
+
+// EntityUpdateInput is the typed input for step.erp_entity_update.
+message EntityUpdateInput {
+  // entity_set is the OData entity set name.
+  string entity_set = 1;
+  // key is the OData entity key expression.
+  string key = 2;
+  // data contains the field values to update as an arbitrary JSON object.
+  google.protobuf.Struct data = 3;
+}
+
+// EntityUpdateOutput is the typed output for step.erp_entity_update.
+message EntityUpdateOutput {
+  // ok is true when the update succeeds.
+  bool ok = 1;
+  // error carries the error message when the update fails.
+  string error = 2;
+}
+
+// ---- step.erp_entity_delete ----
+
+// EntityDeleteInput is the typed input for step.erp_entity_delete.
+message EntityDeleteInput {
+  // entity_set is the OData entity set name.
+  string entity_set = 1;
+  // key is the OData entity key expression.
+  string key = 2;
+}
+
+// EntityDeleteOutput is the typed output for step.erp_entity_delete.
+message EntityDeleteOutput {
+  // ok is true when the delete succeeds.
+  bool ok = 1;
+  // error carries the error message when the delete fails.
+  string error = 2;
+}
+
+// ---- step.erp_batch ----
+
+// BatchOperation describes a single operation within an OData batch request.
+message BatchOperation {
+  // method is the HTTP method: GET, POST, PATCH, PUT, or DELETE.
+  string method = 1;
+  // entity_set is the OData entity set name for this operation.
+  string entity_set = 2;
+  // key is the OData entity key expression (for read/update/delete operations).
+  string key = 3;
+  // body contains the request body fields for POST/PATCH/PUT as an arbitrary JSON object.
+  google.protobuf.Struct body = 4;
+  // content_id is an optional OData $batch content reference ID.
+  string content_id = 5;
+}
+
+// BatchInput is the typed input for step.erp_batch.
+message BatchInput {
+  // operations is the list of batch operations to execute.
+  repeated BatchOperation operations = 1;
+}
+
+// BatchResultItem describes the result of a single batch operation.
+message BatchResultItem {
+  // content_id echoes the content reference ID from the request.
+  string content_id = 1;
+  // status_code is the HTTP status code returned for this operation.
+  int32 status_code = 2;
+  // body contains the response body as an arbitrary JSON object.
+  google.protobuf.Struct body = 3;
+}
+
+// BatchOutput is the typed output for step.erp_batch.
+message BatchOutput {
+  // results is the per-operation results in request order.
+  repeated BatchResultItem results = 1;
+  // error carries the error message when the batch request itself fails.
+  string error = 2;
+}
+
+// ---- step.erp_function_call ----
+
+// FunctionCallInput is the typed input for step.erp_function_call.
+message FunctionCallInput {
+  // function_name is the name of the OData function or action to invoke.
+  string function_name = 1;
+  // params contains the function parameters as an arbitrary JSON object.
+  google.protobuf.Struct params = 2;
+}
+
+// FunctionCallOutput is the typed output for step.erp_function_call.
+message FunctionCallOutput {
+  // result contains the function return value as an arbitrary JSON object.
+  google.protobuf.Struct result = 1;
+  // error carries the error message when the function call fails.
+  string error = 2;
+}
+
+// ---- step.erp_metadata ----
+
+// MetadataInput is the typed input for step.erp_metadata (no required fields).
+message MetadataInput {}
+
+// MetadataOutput is the typed output for step.erp_metadata.
+message MetadataOutput {
+  // metadata contains the OData $metadata document as an XML string.
+  string metadata = 1;
+  // error carries the error message when fetching metadata fails.
+  string error = 2;
+}
+
+// ---- step.erp_raw_request ----
+
+// RawRequestInput is the typed input for step.erp_raw_request.
+message RawRequestInput {
+  // method is the HTTP method (default: GET).
+  string method = 1;
+  // path is the URL path relative to the provider base URL.
+  string path = 2;
+  // body contains the request body for POST/PATCH/PUT as an arbitrary JSON object.
+  google.protobuf.Struct body = 3;
+  // headers contains additional HTTP headers to send with the request.
+  map<string, string> headers = 4;
+}
+
+// RawRequestOutput is the typed output for step.erp_raw_request.
+message RawRequestOutput {
+  // status_code is the HTTP status code of the response.
+  int32 status_code = 1;
+  // body contains the parsed response body as an arbitrary JSON object.
+  google.protobuf.Struct body = 2;
+  // error carries the error message when the request fails.
+  string error = 3;
+}
