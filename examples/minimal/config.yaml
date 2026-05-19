@@ -1,0 +1,13 @@
+# Minimal config exercising workflow-plugin-erp.
+# Schema-validate with: wfctl validate --skip-unknown-types examples/minimal/config.yaml
+version: 1
+modules:
+  - name: erp-provider
+    type: erp.provider
+    config: {}
+workflows:
+  pipeline:
+    steps:
+      - name: example
+        type: step.erp_read_entity
+        config: {}
