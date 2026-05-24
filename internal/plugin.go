@@ -8,7 +8,7 @@ import (
 
 // Version is set at build time via -ldflags
 // "-X github.com/GoCodeAlone/workflow-plugin-erp/internal.Version=X.Y.Z"
-var Version = "dev"
+var Version = "0.0.0"
 
 // Manifest is the plugin manifest exported for tests.
 var Manifest = sdk.PluginManifest{
