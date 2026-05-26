@@ -51,7 +51,19 @@ jobs:
           script: |
             const tag = context.ref.replace('refs/tags/', '');
             const { owner, repo } = context.repo;
-            const { data: release } = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
+            // GoReleaser creates draft releases; listReleases sees drafts while
+            // getReleaseByTag can 404. Retry because the release can be
+            // eventually visible after asset uploads finish.
+            let release;
+            for (let attempt = 0; attempt < 12; attempt++) {
+              const { data: releases } = await github.rest.repos.listReleases({ owner, repo, per_page: 100 });
+              release = releases.find(r => r.tag_name === tag);
+              if (release) break;
+              await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+            if (!release) {
+              throw new Error(`release for tag ${tag} not found in repo listing (latest 100 releases)`);
+            }
             if (release.draft) {
               await github.rest.repos.updateRelease({
                 owner,
