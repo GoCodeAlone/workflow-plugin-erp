@@ -1,6 +1,6 @@
 {
     "name": "workflow-plugin-erp",
-    "version": "0.1.2",
+    "version": "0.0.0",
     "description": "Enterprise ERP integration (SAP S/4HANA via OData v4)",
     "author": "GoCodeAlone",
     "license": "MIT",
